@@ -21,16 +21,18 @@ window.API_URL=API;
 var APPID='3a4af674-61d9-40ce-b345-ee88f915f2fd';
 /* ---------- notifiche push (OneSignal) ---------- */
 window.OneSignalDeferred=window.OneSignalDeferred||[];
-var OS=null,lastId='';
+var OS=null,lastId='',initErr='';
 if(APPID&&APPID.indexOf('__')<0){
   OneSignalDeferred.push(async function(O){
-    try{await O.init({appId:APPID,serviceWorkerPath:'OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){}
+    try{await O.init({appId:APPID,serviceWorkerPath:'OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){initErr=String((e&&e.message)||e)}
   });
 }
 var ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 var standalone=window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
 window.PUSH={
-  st:function(){
+  diag:function(){var s=' [SDK: '+(OS?'ok':(initErr||'non avviato'));if(OS){try{s+=', iscritto: '+(OS.User.PushSubscription.optedIn?'si':'no')+', id: '+(lastId||'-')}catch(e){}}return s+']'},
+  st:function(){return PUSH.st0()+PUSH.diag()},
+  st0:function(){
     if(!APPID||APPID.indexOf('__')>=0)return 'Notifiche non ancora configurate.';
     if(ios&&!standalone)return 'Per le notifiche: Condividi → Aggiungi a Home, poi apri da lì.';
     if(!('Notification' in window))return 'Questo browser non supporta le notifiche.';
@@ -41,7 +43,7 @@ window.PUSH={
   ask:function(){
     return new Promise(function(ok){
       if(!OS){ok();return}
-      OS.Notifications.requestPermission().then(function(){if(lastId)OS.login(lastId);ok()},function(){ok()});
+      OS.Notifications.requestPermission().then(function(){try{OS.User.PushSubscription.optIn()}catch(e){}if(lastId)OS.login(lastId);ok()},function(){ok()});
     });
   },
   login:function(id){lastId=id;if(OS)OS.login(id)}
