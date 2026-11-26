@@ -1,19 +1,71 @@
 <!doctype html>
-<html lang="it">
-<head>
-<meta charset="utf-8">
-<title>Turni</title>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Turni di guardia</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Turni">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0A1610">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="apple-touch-icon.png">
-<style>html,body{margin:0;height:100%;background:#0A1610}iframe{position:fixed;inset:0;width:100%;height:100%;border:0}</style>
-</head>
-<body>
-<iframe src="https://script.google.com/macros/s/AKfycbwIyRJaRg6RzvPkIPdD3cA8oicJUFt5x91iU7w3VXAnwZWNELGu9GlfLY3uyx769HVB/exec" allow="camera;clipboard-write"></iframe>
-</body>
-</html>
+<meta name="theme-color" content="#0e1712">
+<style>html,body{margin:0;background:#0e1712;color:#e8efe9;font-family:-apple-system,system-ui,sans-serif}#boot{padding:24px;opacity:.7}</style>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+</head><body>
+<div id="boot">Caricamento…</div>
+<script>
+(function(){
+var API='https://script.google.com/macros/s/AKfycbwIyRJaRg6RzvPkIPdD3cA8oicJUFt5x91iU7w3VXAnwZWNELGu9GlfLY3uyx769HVB/exec';
+window.API_URL=API;
+var APPID='3a4af674-61d9-40ce-b345-ee88f915f2fd';
+/* ---------- notifiche push (OneSignal) ---------- */
+window.OneSignalDeferred=window.OneSignalDeferred||[];
+var OS=null,lastId='';
+if(APPID&&APPID.indexOf('__')<0){
+  OneSignalDeferred.push(async function(O){
+    try{await O.init({appId:APPID,serviceWorkerPath:'OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){}
+  });
+}
+var ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+var standalone=window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+window.PUSH={
+  st:function(){
+    if(!APPID||APPID.indexOf('__')>=0)return 'Notifiche non ancora configurate.';
+    if(ios&&!standalone)return 'Per le notifiche: Condividi → Aggiungi a Home, poi apri da lì.';
+    if(!('Notification' in window))return 'Questo browser non supporta le notifiche.';
+    if(Notification.permission==='granted')return 'Notifiche attive su questo telefono.';
+    if(Notification.permission==='denied')return 'Notifiche bloccate: riattivale dalle impostazioni del telefono.';
+    return 'Tocca il pulsante per attivarle.';
+  },
+  ask:function(){
+    return new Promise(function(ok){
+      if(!OS){ok();return}
+      OS.Notifications.requestPermission().then(function(){if(lastId)OS.login(lastId);ok()},function(){ok()});
+    });
+  },
+  login:function(id){lastId=id;if(OS)OS.login(id)}
+};
+setInterval(function(){try{if(typeof ME!=='undefined'&&ME&&ME!==lastId)PUSH.login(ME)}catch(e){}},3000);
+/* ---------- caricamento app ---------- */
+function mount(html){
+  var d=new DOMParser().parseFromString(html,'text/html'),scripts=[];
+  Array.prototype.forEach.call(d.head.children,function(n){
+    if(n.tagName==='STYLE'||n.tagName==='LINK')document.head.appendChild(document.importNode(n,true));
+    else if(n.tagName==='SCRIPT')scripts.push(n.textContent);
+  });
+  var b=document.body;b.innerHTML='';
+  Array.prototype.forEach.call(d.body.childNodes,function(n){
+    if(n.nodeType===1&&n.tagName==='SCRIPT')scripts.push(n.textContent);
+    else b.appendChild(document.importNode(n,true));
+  });
+  scripts.forEach(function(t){var s=document.createElement('script');s.textContent=t;document.body.appendChild(s)});
+}
+var cached=null;try{cached=localStorage.getItem('app_html')}catch(e){}
+var fresh=fetch(API+'?a=html&t='+Date.now()).then(function(r){return r.text()}).then(function(t){
+  if(t.indexOf('<html')<0)throw new Error('bad');try{localStorage.setItem('app_html',t)}catch(e){}return t});
+if(cached){mount(cached);fresh.catch(function(){})}
+else fresh.then(mount).catch(function(){document.getElementById('boot').textContent='Impossibile caricare: controlla la connessione e riapri.'});
+})();
+</script>
+</body></html>
