@@ -21,7 +21,9 @@ window.API_URL=API;
 var APPID='3a4af674-61d9-40ce-b345-ee88f915f2fd';
 /* ---------- notifiche push (OneSignal) ---------- */
 window.OneSignalDeferred=window.OneSignalDeferred||[];
-var OS=null,lastId='',initErr='';
+var OS=null,lastId='',initErr='',dbg='',askErr='';
+function probe(){if(!navigator.serviceWorker)return;navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.pushManager.getSubscription().then(function(s){return x.scope.replace(location.origin,'')+(s?' push:si':' push:no')+(x.active?' attivo':x.installing?' install':x.waiting?' attesa':'')})}))}).then(function(a){dbg=' | SW: '+(a.join(';')||'nessuno')+' | perm: '+(window.Notification?Notification.permission:'n/a')}).catch(function(e){dbg=' | SWerr '+e.message})}
+probe();setInterval(probe,3000);
 if(APPID&&APPID.indexOf('__')<0){
   OneSignalDeferred.push(async function(O){
     try{await O.init({appId:APPID,serviceWorkerPath:'/turni/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){initErr=String((e&&e.message)||e)}
@@ -30,7 +32,7 @@ if(APPID&&APPID.indexOf('__')<0){
 var ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 var standalone=window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
 window.PUSH={
-  diag:function(){var s=' [SDK: '+(OS?'ok':(initErr||'non avviato'));if(OS){try{s+=', iscritto: '+(OS.User.PushSubscription.optedIn?'si':'no')+', id: '+(lastId||'-')}catch(e){}}return s+']'},
+  diag:function(){var s=' [SDK: '+(OS?'ok':(initErr||'non avviato'));if(OS){try{s+=', iscritto: '+(OS.User.PushSubscription.optedIn?'si':'no')+', id: '+(lastId||'-')}catch(e){}}return s+dbg+(askErr?' | errore: '+askErr:'')+']'},
   st:function(){return PUSH.st0()+PUSH.diag()},
   st0:function(){
     if(!APPID||APPID.indexOf('__')>=0)return 'Notifiche non ancora configurate.';
@@ -43,12 +45,12 @@ window.PUSH={
   ask:function(){
     return new Promise(function(ok){
       if(!OS){ok();return}
-      OS.Notifications.requestPermission().then(function(){try{OS.User.PushSubscription.optIn()}catch(e){}if(lastId)OS.login(lastId);ok()},function(){ok()});
+      OS.Notifications.requestPermission().then(function(){return OS.User.PushSubscription.optIn()}).then(function(){if(lastId)OS.login(lastId);probe();ok()},function(e){askErr=String((e&&e.message)||e);probe();ok()});
     });
   },
   login:function(id){lastId=id;if(OS)OS.login(id)}
 };
-setInterval(function(){try{if(typeof ME!=='undefined'&&ME&&ME!==lastId)PUSH.login(ME)}catch(e){}},3000);
+setInterval(function(){try{if(typeof AUTH!=='undefined'&&AUTH&&typeof ME!=='undefined'&&ME&&ME!==lastId)PUSH.login(ME)}catch(e){}},3000);
 /* ---------- caricamento app ---------- */
 function mount(html){
   var d=new DOMParser().parseFromString(html,'text/html'),scripts=[];
