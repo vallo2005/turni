@@ -66,7 +66,8 @@ function mount(html){
 var cached=null;try{cached=localStorage.getItem('app_html')}catch(e){}
 var fresh=fetch(API+'?a=html&t='+Date.now()).then(function(r){return r.text()}).then(function(t){
   if(t.indexOf('<html')<0)throw new Error('bad');try{localStorage.setItem('app_html',t)}catch(e){}return t});
-if(cached){mount(cached);fresh.catch(function(){})}
+var t0=Date.now();
+if(cached){mount(cached);fresh.then(function(n){if(n!==cached&&Date.now()-t0<20000)location.reload()}).catch(function(){})}
 else fresh.then(mount).catch(function(){document.getElementById('boot').textContent='Impossibile caricare: controlla la connessione e riapri.'});
 })();
 </script>
