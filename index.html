@@ -24,7 +24,7 @@ window.OneSignalDeferred=window.OneSignalDeferred||[];
 var OS=null,lastId='',initErr='';
 if(APPID&&APPID.indexOf('__')<0){
   OneSignalDeferred.push(async function(O){
-    try{await O.init({appId:APPID,serviceWorkerPath:'OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){initErr=String((e&&e.message)||e)}
+    try{await O.init({appId:APPID,serviceWorkerPath:'/turni/OneSignalSDKWorker.js',serviceWorkerParam:{scope:'/turni/'},notifyButton:{enable:false}});OS=O;if(lastId)O.login(lastId)}catch(e){initErr=String((e&&e.message)||e)}
   });
 }
 var ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
